@@ -6,7 +6,7 @@
 
 if [ "$1" = "source" ];then
 	# Edit the token in here
-	TOKEN='200528375:AAHOFIKbl2lnBcjDhdOYmeHqV0nWFnNYvAs'
+	TOKEN='182835165:AAH8j8TuQsb2VPuqIR2-_4m-AyRBFgnFDSo'
 	# Set INLINE to 1 in order to receive inline queries.
 	# To enable this option in your bot, send the /setinline command to @BotFather.
 	INLINE=0
@@ -84,26 +84,122 @@ SEC=20
 
 check_settings () {
 
+# 1
+
 RUN1=$(grep ${ID}_1 $RUN )
+if [ $? == 1 ]; then
+	RUN1=$(echo "Not running" )
+else
+	RUN1=$(echo "Running" )
+fi
+
 SEC1=$(grep ${ID}_1 $FSEC | cut -d '_' -f3 )
+if [ -z "${SEC1}" ]; then
+	SEC1=20
+fi
 LINK1=$(cat $LOG1 | head -1 )
+
+# 2
+
+RUN2=$(grep ${ID}_2 $RUN )
+if [ $? == 1 ]; then
+	RUN2=$(echo "Not running" )
+else
+	RUN2=$(echo "Running" )
+fi
+
+SEC2=$(grep ${ID}_2 $FSEC | cut -d '_' -f3 )
+if [ -z "${SEC2}" ]; then
+	SEC2=20
+fi
+LINK2=$(cat $LOG2 | head -1 )
+
+# 3
+
+RUN3=$(grep ${ID}_3 $RUN )
+if [ $? == 1 ]; then
+	RUN3=$(echo "Not running" )
+else
+	RUN3=$(echo "Running" )
+fi
+
+SEC3=$(grep ${ID}_3 $FSEC | cut -d '_' -f3 )
+if [ -z "${SEC3}" ]; then
+	SEC3=20
+fi
+LINK3=$(cat $LOG3 | head -1 )
+
+# 4
+
+RUN4=$(grep ${ID}_4 $RUN )
+if [ $? == 1 ]; then
+	RUN4=$(echo "Not running" )
+else
+	RUN4=$(echo "Running" )
+fi
+
+SEC4=$(grep ${ID}_4 $FSEC | cut -d '_' -f3 )
+if [ -z "${SEC4}" ]; then
+	SEC4=20
+fi
+LINK4=$(cat $LOG4 | head -1 )
+
+# 5
+
+RUN5=$(grep ${ID}_5 $RUN )
+if [ $? == 1 ]; then
+	RUN5=$(echo "Not running" )
+else
+	RUN5=$(echo "Running" )
+fi
+
+SEC5=$(grep ${ID}_5 $FSEC | cut -d '_' -f3 )
+if [ -z "${SEC5}" ]; then
+	SEC5=20
+fi
+LINK5=$(cat $LOG5 | head -1 )
+
+# 6
+
+RUN6=$(grep ${ID}_6 $RUN )
+if [ $? == 1 ]; then
+	RUN6=$(echo "Not running" )
+else
+	RUN6=$(echo "Running" )
+fi
+
+SEC6=$(grep ${ID}_6 $FSEC | cut -d '_' -f3 )
+if [ -z "${SEC6}" ]; then
+	SEC6=20
+fi
+LINK6=$(cat $LOG6 | head -1 )
 
 send_markdown_message "$ID" "*Current settings:*
 *Track 1:*
-State: $RUN1
-Checking Time: $SEC1
+_State:_ $RUN1
+_Checking Time:_ ${SEC1}s
 $LINK1
 *Track 2:*
+_State:_ $RUN2
+_Checking Time:_ ${SEC2}s
+$LINK2
 *Track 3:*
+_State:_ $RUN3
+_Checking Time:_ ${SEC3}s
+$LINK3
 *Track 4:*
+_State:_ $RUN4
+_Checking Time:_ ${SEC4}s
+$LINK4
 *Track 5:*
+_State:_ $RUN5
+_Checking Time:_ ${SEC5}s
+$LINK5
 *Track 6:*
-
-
-
-
+_State:_ $RUN6
+_Checking Time:_ ${SEC6}s
+$LINK6
 "
-
 
 }
 
@@ -180,7 +276,7 @@ Write: /cancel$1"
 	RELX=0
 				
 	rm ${LOG}
-	echo "Link: $LINK" >> $LOG
+	echo "_Link:_ ${LINK}" >> $LOG
 	echo " " >> ${LOG}
 	echo "telegram.me/Check4ChangeAmazonBot" >> ${LOG}
 	echo " " >> ${LOG}
