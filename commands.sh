@@ -78,6 +78,7 @@ LOG6=files/6_${ID}.log
 RUN=config/run.config
 CANCEL=config/cancels.config
 FSEC=config/seconds.config
+FMIN=config/minimums.config
 SEC=20
 
 
@@ -100,6 +101,13 @@ SEC1=$(grep ${ID}_1 $FSEC | cut -d '_' -f3 )
 if [ -z "${SEC1}" ]; then
 	SEC1=20
 fi
+
+PRICE1=$(grep ${ID}_1 $FMIN | cut -d '_' -f3 )
+if [ -z "${PRICE1}" ]; then
+	PRICE1=$(echo "When price changes" )
+else
+	PRICE1=$(echo "If drops under ${PRICE1}EUR/GBP" )
+fi
 LINK1=$(cat $LOG1 | head -1 )
 
 # 2
@@ -115,6 +123,14 @@ SEC2=$(grep ${ID}_2 $FSEC | cut -d '_' -f3 )
 if [ -z "${SEC2}" ]; then
 	SEC2=20
 fi
+
+PRICE2=$(grep ${ID}_2 $FMIN | cut -d '_' -f3 )
+if [ -z "${PRICE2}" ]; then
+	PRICE2=$(echo "When price changes" )
+else
+	PRICE2=$(echo "If drops under ${PRICE2}EUR/GBP" )
+fi
+
 LINK2=$(cat $LOG2 | head -1 )
 
 # 3
@@ -130,6 +146,14 @@ SEC3=$(grep ${ID}_3 $FSEC | cut -d '_' -f3 )
 if [ -z "${SEC3}" ]; then
 	SEC3=20
 fi
+
+PRICE3=$(grep ${ID}_3 $FMIN | cut -d '_' -f3 )
+if [ -z "${PRICE3}" ]; then
+	PRICE3=$(echo "When price changes" )
+else
+	PRICE3=$(echo "If drops under ${PRICE3}EUR/GBP" )
+fi
+
 LINK3=$(cat $LOG3 | head -1 )
 
 # 4
@@ -145,6 +169,14 @@ SEC4=$(grep ${ID}_4 $FSEC | cut -d '_' -f3 )
 if [ -z "${SEC4}" ]; then
 	SEC4=20
 fi
+
+PRICE4=$(grep ${ID}_4 $FMIN | cut -d '_' -f3 )
+if [ -z "${PRICE4}" ]; then
+	PRICE4=$(echo "When price changes" )
+else
+	PRICE4=$(echo "If drops under ${PRICE4}EUR/GBP" )
+fi
+
 LINK4=$(cat $LOG4 | head -1 )
 
 # 5
@@ -160,6 +192,14 @@ SEC5=$(grep ${ID}_5 $FSEC | cut -d '_' -f3 )
 if [ -z "${SEC5}" ]; then
 	SEC5=20
 fi
+
+PRICE5=$(grep ${ID}_5 $FMIN | cut -d '_' -f3 )
+if [ -z "${PRICE5}" ]; then
+	PRICE15=$(echo "When price changes" )
+else
+	PRICE5=$(echo "If drops under ${PRICE5}EUR/GBP" )
+fi
+
 LINK5=$(cat $LOG5 | head -1 )
 
 # 6
@@ -175,32 +215,46 @@ SEC6=$(grep ${ID}_6 $FSEC | cut -d '_' -f3 )
 if [ -z "${SEC6}" ]; then
 	SEC6=20
 fi
+
+PRICE6=$(grep ${ID}_6 $FMIN | cut -d '_' -f3 )
+if [ -z "${PRICE6}" ]; then
+	PRICE6=$(echo "When price changes" )
+else
+	PRICE6=$(echo "If drops under ${PRICE6}EUR/GBP" )
+fi
+
 LINK6=$(cat $LOG6 | head -1 )
 
 send_markdown_message "$ID" "*Current settings:*
 *Track 1:*
 _State:_ $RUN1
 _Checking Time:_ ${SEC1}s
+_Price Alert:_ ${PRICE1}
 $LINK1
 *Track 2:*
 _State:_ $RUN2
 _Checking Time:_ ${SEC2}s
+_Price Alert:_ ${PRICE2}
 $LINK2
 *Track 3:*
 _State:_ $RUN3
 _Checking Time:_ ${SEC3}s
+_Price Alert:_ ${PRICE3}
 $LINK3
 *Track 4:*
 _State:_ $RUN4
 _Checking Time:_ ${SEC4}s
+_Price Alert:_ ${PRICE4}
 $LINK4
 *Track 5:*
 _State:_ $RUN5
 _Checking Time:_ ${SEC5}s
+_Price Alert:_ ${PRICE5}
 $LINK5
 *Track 6:*
 _State:_ $RUN6
 _Checking Time:_ ${SEC6}s
+_Price Alert:_ ${PRICE6}
 $LINK6
 "
 
@@ -246,6 +300,32 @@ seconds_check () {
 	echo ${ID}_${1}_${TIME} >> $FSEC
 	send_markdown_message "$ID" "Time check for product* $1 *set to* ${TIME}*."
 }
+
+
+min_check () {
+
+	MIN=`echo $MESSAGE | cut -d ' ' -f2`
+	if [ -z "${MIN}" ]; then
+		send_message "$ID" "Please, send a correct minimum price."
+		exit 0
+	fi
+	
+	if [[ $MIN == *['!'@#\$%^\&*()_+a-zA-Z]* ]]; then
+		send_message "$ID" "Please, send a correct minimum price."
+		exit 0
+	fi
+	
+	if [ "$MIN" -gt 99999 ] || [ "$MIN" -le 1 ] ; then
+		send_message "$ID" "Minimum price invalid."
+		exit 0
+	fi
+	
+	grep -v "${ID}_${1}_" $FMIN > $FMIN.bak
+	mv $FMIN.bak $FMIN
+	echo ${ID}_${1}_${MIN} >> $FMIN
+	send_markdown_message "$ID" "Minimum price for product* $1 *set to* ${MIN}EUR/GBP*."
+}
+
 
 
 check_link () {
@@ -339,7 +419,7 @@ Write: /cancel$1"
 	while true; do
 	
 		date=`date`
-		REL=`curl -s $LINK | grep '<span class="a-size-large a-color-price olpOfferPrice a-text-bold">' | head -1 | cut -d ">" -f 2 | cut -d "<" -f1 | sed 's/^[[:space:]]*//' | cut -f 2 -d" "`
+		REL=`curl -s $LINK | grep '<span class="a-size-large a-color-price olpOfferPrice a-text-bold">' | head -1 | cut -d ">" -f 2 | cut -d "<" -f1 | sed 's/^[[:space:]]*//' | cut -f 2 -d" " | tr "," "."`
 					
 		if [ -z "$SPECIAL" ]; then
 			REL=`curl -s $LINK | grep '<span class="a-size-large a-color-price olpOfferPrice a-text-bold">' | head -1 | cut -d ">" -f 2 | cut -d "<" -f1 | sed 's/^[[:space:]]*//' | cut -c3-`
@@ -358,7 +438,7 @@ Write: /cancel$1"
 		fi		
 		if [ "$REL" != "$RELX" ]; then
 			if [ "$RELX" == "0" ]; then
-				send_markdown_message "$ID" "*Current price:* $REL EUR"
+				send_markdown_message "$ID" "*Current price:* $REL EUR/GBP"
 				send_markdown_message "$ID" "*Checking time:* $SEC seconds"
 				send_markdown_message "$ID" "*Running!*"
 				echo "$REL ------- $date" >> ${LOG}
@@ -380,8 +460,8 @@ Product under the specified limit: $MIN *"
 
 		echo "$REL ------- $date" >> ${LOG}
 		send_markdown_message "$ID" "*Price for Track $1 has changed!*
-_Old price:_ $RELX EUR
-_New price:_ $REL EUR"
+_Old price:_ $RELX EUR/GBP
+_New price:_ $REL EUR/GBP"
 
 		fi
 		sleep $SEC
@@ -426,22 +506,43 @@ if [ $? == 0 ]; then
 	fi
 fi
 
+echo $MESSAGE | grep "^/price" 
+if [ $? == 0 ]; then
+	CHECK=`echo $MESSAGE | cut -d ' ' -f1`
+	if [ $CHECK == "/price1" ]; then
+		min_check "1"
+	elif [ $CHECK == "/price2" ]; then
+		min_check "2"
+	elif [ $CHECK == "/price3" ]; then
+		min_check "3"
+	elif [ $CHECK == "/price4" ]; then
+		min_check "4"
+	elif [ $CHECK == "/price5" ]; then
+		min_check "5"
+	elif [ $CHECK == "/price6" ]; then
+		min_check "6"
+	fi
+fi
+
 		case $MESSAGE in
 				
 			'/help')
 			send_action "${USER[ID]}" "typing"
 			send_markdown_message "${USER[ID]}" "*How to use the bot:*
+
 This bot can track up to *six* Amazon products at the same time. Each product will be checked separately, has a different logfile and other configurations.
 
 To use the bot, you need to provide the Amazon *ASIN* of the product wich can be taken from the link of the product.
 For example, for this product: _https://www.amazon.es/dp/B013P2K9NC_ the *ASIN* is B013P2K9NC.
-If you don't know how to take the ASIN of the product, send the link to the @ShurAmazonBot.
+If you don't know how to take the ASIN of the product, send the Amazon link of the product to @ShurAmazonBot.
 
 As product checking runs separately, commands are separated for the different tracking items:
 
 */check<1-6> <ASIN> <Country name>*  : It will start tracking that item with the number selected (1-6). Country names avaliable: *ES UK FR DE IT.*
 
-*/seconds<1-6> <5-99999>*  : Time between checking price of the product (default is 20s).
+*/seconds<1-6> <5-99999>*  : Time between checking price of the product (default is 20s). Optional field.
+
+*/price<1-6> <0-999999>*  : You can set a minimum value for the price to get a notification (by default you will be notified allways if there is any change). Optional field.
 
 */cancel<1-6>*  : This cancels the specified tracking.
 
@@ -455,6 +556,7 @@ As product checking runs separately, commands are separated for the different tr
 */log1 * :  The log of track number 1 will be sent.
 */cancel6* :  The tracking 5 will stop to check prices.
 */secconds5 120*  : This will be set 120s to the tracking time of track 5. 
+*/price1 56*  : You will only get notifications if price of track 1 drops over 56EUR/GBP
 
 - Use Notepad++ or similar to open the logfiles, otherwise the log will be shown in one line.	
 "			
