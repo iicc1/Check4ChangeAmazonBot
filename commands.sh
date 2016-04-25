@@ -11,7 +11,7 @@ if [ "$1" = "source" ];then
 	# To enable this option in your bot, send the /setinline command to @BotFather.
 	INLINE=0
 	# Set to .* to allow sending files from all locations
-	FILE_REGEX='/home/user/allowed/.*'
+	#FILE_REGEX='/home/user/allowed/.*'
 else
 	if ! tmux ls | grep -v send | grep -q $copname; then
 		[ ! -z ${URLS[*]} ] && {
@@ -262,10 +262,18 @@ $LINK6
 
 cancel_check () {
 
-	send_markdown_message "$ID" "*Tracking $1 stoped*"
+	send_markdown_message "$ID" "*Tracking $1 stopped*"
 	echo ${ID}_${1} >> $CANCEL
 	grep -v ${ID}_${1} $RUN > $RUN.bak
 	mv $RUN.bak $RUN
+
+	grep -v ${ID}_${1} $FSEC > $FSEC.bak
+	mv $FSEC.bak $FSEC
+	
+	grep -v ${ID}_${1} $FMIN > $FMIN.bak
+	mv $FMIN.bak $FMIN
+
+
 	exit 1		
 }
 
@@ -273,7 +281,7 @@ send_log () {
 
 	send_markdown_message "$ID" "*Sending log for Track ${1}*"
 	send_action "$ID" "upload_document"
-	send_file "$ID" "/home/ubuntu/Check4ChangeAmazonBot/files/${1}_${ID}.log" "Check4ChangeAmazonBot Price Log${1}"
+	send_file "$ID" "files/${1}_${ID}.log" "Check4ChangeAmazonBot Price Log${1}"
 
 }	
 
@@ -330,7 +338,7 @@ min_check () {
 
 check_link () {
 
-	SPECIAL=
+	SPECIAL=0
 	SEC=20
 	LOG=files/${1}_${ID}.log
 	
@@ -406,23 +414,37 @@ Write: /cancel$1"
 	
 	grep -e "${ID}_${1}_" $FSEC
 	if [ $? == 0 ]; then
-		SEC=$(grep -e "${ID}_${1}_" $FSEC | cut -d "_" -f 2 | head -1 )
+		SEC=$(grep -e "${ID}_${1}_" $FSEC | cut -d "_" -f 3 | head -1 )
 	fi
 
 	grep -e "${ID}_${1}_" $FMIN
 	if [ $? == 0 ]; then
-		MIN=$(grep -e "${ID}_${1}_" $FMIN | cut -d "_" -f 2 | head -1 )
+		MIN=$(grep -e "${ID}_${1}_" $FMIN | cut -d "_" -f 3 | head -1 )
 	fi
 	
 	echo "${ID}_${1}" >> $RUN
 		
 	while true; do
+
+		# If settings changes when running. Temporal solution.
+		grep -e "${ID}_${1}_" $FSEC
+		if [ $? == 0 ]; then
+			SEC=$(grep -e "${ID}_${1}_" $FSEC | cut -d "_" -f 3 | head -1 )
+		fi
+
+		grep -e "${ID}_${1}_" $FMIN
+		if [ $? == 0 ]; then
+			MIN=$(grep -e "${ID}_${1}_" $FMIN | cut -d "_" -f 3 | head -1 )
+		fi
 	
 		date=`date`
-		REL=`curl -s $LINK | grep '<span class="a-size-large a-color-price olpOfferPrice a-text-bold">' | head -1 | cut -d ">" -f 2 | cut -d "<" -f1 | sed 's/^[[:space:]]*//' | cut -f 2 -d" " | tr "," "."`
 					
-		if [ -z "$SPECIAL" ]; then
-			REL=`curl -s $LINK | grep '<span class="a-size-large a-color-price olpOfferPrice a-text-bold">' | head -1 | cut -d ">" -f 2 | cut -d "<" -f1 | sed 's/^[[:space:]]*//' | cut -c3-`
+		if [ "$SPECIAL" == "1" ]; then
+			REL=`curl -s $LINK | grep '<span class="a-size-large a-color-price olpOfferPrice a-text-bold">' | head -1 | cut -d ">" -f 2 | cut -d "<" -f1 | sed 's/^[[:space:]]*//' | cut -c3- | cut -f 1 -d" "`
+		
+		else
+			REL=`curl -s $LINK | grep '<span class="a-size-large a-color-price olpOfferPrice a-text-bold">' | head -1 | cut -d ">" -f 2 | cut -d "<" -f1 | sed 's/^[[:space:]]*//' | cut -f 2 -d" " | tr "," "."`
+
 		fi
 
 		if [ -z "$REL" ]; then
@@ -447,21 +469,23 @@ Write: /cancel$1"
 			fi
 
 
-		if [ -z "$MIN" ]; then
+			if [ -z "$MIN" ]; then
 		    MATCH=$( echo "$MIN>$REL" | bc )
-   			 if [ $MATCH -eq 1 ]; then
+   				 if [ $MATCH -eq 1 ]; then
        				send_markdown_message "$ID" "*Price alert.
-Product under the specified limit: $MIN *"
-   			 fi
+Product under the specified limit: $MIN *
+$LINK"
+   				 fi
 		
-		fi
-
-
-
-		echo "$REL ------- $date" >> ${LOG}
-		send_markdown_message "$ID" "*Price for Track $1 has changed!*
+			else
+			send_markdown_message "$ID" "*Price for Track $1 has changed!*
 _Old price:_ $RELX EUR/GBP
-_New price:_ $REL EUR/GBP"
+_New price:_ $REL EUR/GBP
+$LINK"
+			fi
+
+			echo "$REL ------- $date" >> ${LOG}
+
 
 		fi
 		sleep $SEC
