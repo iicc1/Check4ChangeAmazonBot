@@ -54,6 +54,9 @@ else
 #==============================================================================================		
 #==============================================================================================
 
+# if [ -z "${USER[USERNAME]}" ], then
+	# USER[USERNAME]=(USER[FIRST_NAME])
+# fi
 ID=${USER[ID]}
 LOG1=files/1_${ID}.log
 LOG2=files/2_${ID}.log
@@ -216,7 +219,7 @@ send_log () {
 
 	send_markdown_message "$ID" "*Sending log for Track ${1}*"
 	send_action "$ID" "upload_document"
-	send_file "$ID" "/home/ubuntu/Check4ChangeAmazonBot/files/${1}_${ID}.txt" "Check4ChangeAmazonBot Price Log${1}"
+	send_file "$ID" "/home/ubuntu/Check4ChangeAmazonBot/files/${1}_${ID}.log" "Check4ChangeAmazonBot Price Log${1}"
 
 }	
 
@@ -247,12 +250,14 @@ seconds_check () {
 
 check_link () {
 
+	SPECIAL=
 	SEC=20
 	LOG=files/${1}_${ID}.log
 	
 	grep -v $ID_$1 $CANCEL > $CANCEL.bak
 	mv $CANCEL.bak $CANCEL
-	LINK=`echo $MESSAGE | cut -d ' ' -f2`
+	ASIN=`echo $MESSAGE | cut -d ' ' -f2`
+	COUNTRY=`echo $MESSAGE | cut -d ' ' -f3`
 	
 	grep -e "${ID}_${1}" $RUN
 	if [ $? == 0 ]; then
@@ -261,16 +266,52 @@ Write: /cancel$1"
 		break	
 	fi
 	
-	echo $LINK | grep -e "offer-listing"
-	if [ $? != 0 ]; then
-		send_markdown_message "$ID" "Please, send the *offer-listing* link of the product, like this: /check1 https://www.amazon.es/gp/offer-listing/B017T1LB2S "
+	if [ -z "${ASIN}" ]; then
+		send_message "$ID" "Please, send the ASIN correctly."
 		break
 	fi
 	
-	if [ -z "${LINK}" ]; then
-		send_message "$ID" "Please, send the link correctly."
+	echo $ASIN | grep -e "B0"
+	if [ $? != 0 ]; then
+		send_markdown_message "$ID" "Please, send the *ASIN* of the product with the country name, like this: /check1 B017T1LB2S ES"
 		break
 	fi
+	
+	if [ -z "${COUNTRY}" ]; then
+		send_message "$ID" "Please, send the country code (ES UK DE FR IT) correctly, like this: /check1 B017T1LB2S ES"
+		break
+	fi
+	
+	if [ "$COUNTRY" = "ES" ] || [ "$COUNTRY" = "IT" ] || [ "$COUNTRY" = "DE" ] || [ "$COUNTRY" = "UK" ] || [ "$COUNTRY" = "FR" ]; then
+	
+		if [ "$COUNTRY" = "ES" ]; then
+			LOCALE=es
+		fi
+	
+		if [ "$COUNTRY" = "IT" ]; then
+			LOCALE=it
+		fi	
+		
+		if [ "$COUNTRY" = "DE" ]; then
+			LOCALE=de
+		fi	
+		
+		if [ "$COUNTRY" = "UK" ]; then
+			LOCALE=co.uk
+			SPECIAL=1
+		fi	
+		
+		if [ "$COUNTRY" = "FR" ]; then
+			LOCALE=fr
+		fi
+		
+	else 
+		send_message "$ID" "Please, send the country code (ES UK DE FR IT) correctly, like this: /check1 B017T1LB2S ES"
+		break
+		
+	fi
+	
+	LINK=https://www.amazon.${LOCALE}/gp/offer-listing/${ASIN}
 	
 	send_markdown_message "$ID" "*Tracking link:* *$LINK*"
 	RELX=0
@@ -287,6 +328,11 @@ Write: /cancel$1"
 	if [ $? == 0 ]; then
 		SEC=$(grep -e "${ID}_${1}_" $FSEC | cut -d "_" -f 2 | head -1 )
 	fi
+
+	grep -e "${ID}_${1}_" $FMIN
+	if [ $? == 0 ]; then
+		MIN=$(grep -e "${ID}_${1}_" $FMIN | cut -d "_" -f 2 | head -1 )
+	fi
 	
 	echo "${ID}_${1}" >> $RUN
 		
@@ -295,6 +341,10 @@ Write: /cancel$1"
 		date=`date`
 		REL=`curl -s $LINK | grep '<span class="a-size-large a-color-price olpOfferPrice a-text-bold">' | head -1 | cut -d ">" -f 2 | cut -d "<" -f1 | sed 's/^[[:space:]]*//' | cut -f 2 -d" "`
 					
+		if [ -z "$SPECIAL" ]; then
+			REL=`curl -s $LINK | grep '<span class="a-size-large a-color-price olpOfferPrice a-text-bold">' | head -1 | cut -d ">" -f 2 | cut -d "<" -f1 | sed 's/^[[:space:]]*//' | cut -c3-`
+		fi
+
 		if [ -z "$REL" ]; then
 			sleep 2
 			continue
@@ -310,15 +360,29 @@ Write: /cancel$1"
 			if [ "$RELX" == "0" ]; then
 				send_markdown_message "$ID" "*Current price:* $REL EUR"
 				send_markdown_message "$ID" "*Checking time:* $SEC seconds"
-				send_markdown_message "$ID" "*Started!"
+				send_markdown_message "$ID" "*Running!*"
 				echo "$REL ------- $date" >> ${LOG}
 				RELX=$REL
 				continue
 			fi
-			echo "$REL ------- $date" >> ${LOG}
-			send_markdown_message "$ID" "*Price for Track $1 has changed!*
+
+
+		if [ -z "$MIN" ]; then
+		    MATCH=$( echo "$MIN>$REL" | bc )
+   			 if [ $MATCH -eq 1 ]; then
+       				send_markdown_message "$ID" "*Price alert.
+Product under the specified limit: $MIN *"
+   			 fi
+		
+		fi
+
+
+
+		echo "$REL ------- $date" >> ${LOG}
+		send_markdown_message "$ID" "*Price for Track $1 has changed!*
 _Old price:_ $RELX EUR
 _New price:_ $REL EUR"
+
 		fi
 		sleep $SEC
 		RELX=$REL
@@ -367,14 +431,15 @@ fi
 			'/help')
 			send_action "${USER[ID]}" "typing"
 			send_markdown_message "${USER[ID]}" "*How to use the bot:*
-This bot can track up to six amazon products at the same time. Each product will be checked separately, has a different logfile and other configurations.
+This bot can track up to *six* Amazon products at the same time. Each product will be checked separately, has a different logfile and other configurations.
 
-To use the bot, you need to provide the Amazon link of the product, but the link of the offer-listing of it. For example:
-https://www.amazon.es/gp/offer-listing/B017T1LB2S
+To use the bot, you need to provide the Amazon *ASIN* of the product wich can be taken from the link of the product.
+For example, for this product: _https://www.amazon.es/dp/B013P2K9NC_ the *ASIN* is B013P2K9NC.
+If you don't know how to take the ASIN of the product, send the link to the @ShurAmazonBot.
 
 As product checking runs separately, commands are separated for the different tracking items:
 
-*/check<1-6> <HereGoesAmazonLink>*  : It will start tracking that item.
+*/check<1-6> <ASIN> <Country name>*  : It will start tracking that item with the number selected (1-6). Country names avaliable: *ES UK FR DE IT.*
 
 */seconds<1-6> <5-99999>*  : Time between checking price of the product (default is 20s).
 
@@ -384,7 +449,14 @@ As product checking runs separately, commands are separated for the different tr
 
 */settings*  :  To see the current status of all the tracks and configurations.
 
-- Use Notepad++ or similar to open the logfiles, otherwise the log will be shown in one line.		
+*Examples of commands:*
+
+*/check2 B013P2K9NC ES *: This will be checking the price of the product B013P2K9NC in Spain
+*/log1 * :  The log of track number 1 will be sent.
+*/cancel6* :  The tracking 5 will stop to check prices.
+*/secconds5 120*  : This will be set 120s to the tracking time of track 5. 
+
+- Use Notepad++ or similar to open the logfiles, otherwise the log will be shown in one line.	
 "			
 			;;
 			
@@ -407,7 +479,7 @@ When a change of price is detected, it will notify you and it will write it to a
 
 *Please see* /help *to see the commands and detailed options avaliable.*
 
-Source code avaliable at: https://github.com/iicc1/Check4ChangeAmazonBot
+*Source code* avaliable at: https://github.com/iicc1/Check4ChangeAmazonBot
 
 *By:* @iicc1"
 				;;
@@ -464,4 +536,3 @@ Source code avaliable at: https://github.com/iicc1/Check4ChangeAmazonBot
 		esac
 
 	fi
-
