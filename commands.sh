@@ -226,6 +226,7 @@ fi
 LINK6=$(cat $LOG6 | head -1 )
 
 send_markdown_message "$ID" "*Current settings:*
+
 *Track 1:*
 _State:_ $RUN1
 _Checking Time:_ ${SEC1}s
@@ -272,7 +273,8 @@ cancel_check () {
 	
 	grep -v ${ID}_${1} $FMIN > $FMIN.bak
 	mv $FMIN.bak $FMIN
-
+	
+	rm files/${1}_${ID}.log
 
 	exit 1		
 }
@@ -340,6 +342,7 @@ check_link () {
 
 	SPECIAL=0
 	SEC=20
+	MIN=0
 	LOG=files/${1}_${ID}.log
 	
 	grep -v $ID_$1 $CANCEL > $CANCEL.bak
@@ -420,13 +423,15 @@ Write: /cancel$1"
 	grep -e "${ID}_${1}_" $FMIN
 	if [ $? == 0 ]; then
 		MIN=$(grep -e "${ID}_${1}_" $FMIN | cut -d "_" -f 3 | head -1 )
+	else
+		MIN=0
 	fi
 	
 	echo "${ID}_${1}" >> $RUN
 		
 	while true; do
 
-		# If settings changes when running. Temporal solution.
+		# If price changes when running. Temporal solution.
 		grep -e "${ID}_${1}_" $FSEC
 		if [ $? == 0 ]; then
 			SEC=$(grep -e "${ID}_${1}_" $FSEC | cut -d "_" -f 3 | head -1 )
@@ -435,6 +440,8 @@ Write: /cancel$1"
 		grep -e "${ID}_${1}_" $FMIN
 		if [ $? == 0 ]; then
 			MIN=$(grep -e "${ID}_${1}_" $FMIN | cut -d "_" -f 3 | head -1 )
+		else
+			MIN=0
 		fi
 	
 		date=`date`
@@ -469,19 +476,18 @@ Write: /cancel$1"
 			fi
 
 
-			if [ -z "$MIN" ]; then
-		    MATCH=$( echo "$MIN>$REL" | bc )
-   				 if [ $MATCH -eq 1 ]; then
-       				send_markdown_message "$ID" "*Price alert.
-Product under the specified limit: $MIN *
-$LINK"
-   				 fi
-		
-			else
+			if [ "$MIN" == "0" ]; then
 			send_markdown_message "$ID" "*Price for Track $1 has changed!*
 _Old price:_ $RELX EUR/GBP
 _New price:_ $REL EUR/GBP
 $LINK"
+			else
+			    MATCH=$( echo "$MIN>$REL" | bc )
+   				 if [ $MATCH -eq 1 ]; then
+       					send_markdown_message "$ID" "*Price alert.
+Product under the specified limit: $MIN *
+$LINK"
+   				 fi
 			fi
 
 			echo "$REL ------- $date" >> ${LOG}
