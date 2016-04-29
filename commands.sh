@@ -6,48 +6,13 @@
 
 if [ "$1" = "source" ];then
 	# Edit the token in here
-	TOKEN='PUT HERE YOUR TOKEN'
+	TOKEN='Put your token here!'
 	# Set INLINE to 1 in order to receive inline queries.
 	# To enable this option in your bot, send the /setinline command to @BotFather.
 	INLINE=0
 	# Set to .* to allow sending files from all locations
 	#FILE_REGEX='/home/user/allowed/.*'
-else
-	if ! tmux ls | grep -v send | grep -q $copname; then
-		[ ! -z ${URLS[*]} ] && {
-		curl -s ${URLS[*]} -o $NAME
-			send_file "${USER[ID]}" "$NAME" "$CAPTION"
-			rm "$NAME"
-		}
-		[ ! -z ${LOCATION[*]} ] && send_location "${USER[ID]}" "${LOCATION[LATITUDE]}" "${LOCATION[LONGITUDE]}"
-
-		# Inline
-		if [ $INLINE == 1 ]; then
-			# inline query data
-			iUSER[FIRST_NAME]=$(echo "$res" | sed 's/^.*\(first_name.*\)/\1/g' | cut -d '"' -f3 | tail -1)
-			iUSER[LAST_NAME]=$(echo "$res" | sed 's/^.*\(last_name.*\)/\1/g' | cut -d '"' -f3)
-			iUSER[USERNAME]=$(echo "$res" | sed 's/^.*\(username.*\)/\1/g' | cut -d '"' -f3 | tail -1)
-			iQUERY_ID=$(echo "$res" | sed 's/^.*\(inline_query.*\)/\1/g' | cut -d '"' -f5 | tail -1)
-			iQUERY_MSG=$(echo "$res" | sed 's/^.*\(inline_query.*\)/\1/g' | cut -d '"' -f5 | tail -6 | head -1)
-
-			# Inline examples
-			if [[ $iQUERY_MSG == photo ]]; then
-				answer_inline_query "$iQUERY_ID" "photo" "http://blog.techhysahil.com/wp-content/uploads/2016/01/Bash_Scripting.jpeg" "http://blog.techhysahil.com/wp-content/uploads/2016/01/Bash_Scripting.jpeg"
-			fi
-
-			if [[ $iQUERY_MSG == sticker ]]; then
-				answer_inline_query "$iQUERY_ID" "cached_sticker" "BQADBAAD_QEAAiSFLwABWSYyiuj-g4AC"
-			fi
-
-			if [[ $iQUERY_MSG == gif ]]; then
-				answer_inline_query "$iQUERY_ID" "cached_gif" "BQADBAADIwYAAmwsDAABlIia56QGP0YC"
-			fi
-			if [[ $iQUERY_MSG == web ]]; then
-				answer_inline_query "$iQUERY_ID" "article" "Telegram" "https://telegram.org/"
-			fi
-		fi
 	fi
-	
 	
 	
 #==============================================================================================		
@@ -57,6 +22,7 @@ else
 # if [ -z "${USER[USERNAME]}" ], then
 	# USER[USERNAME]=(USER[FIRST_NAME])
 # fi
+
 ID=${USER[ID]}
 LOG1=files/1_${ID}.log
 LOG2=files/2_${ID}.log
@@ -75,10 +41,10 @@ LOG6=files/6_${ID}.log
 	# touch $LOG6
 # fi
 
-RUN=config/run.config
-CANCEL=config/cancels.config
-FSEC=config/seconds.config
-FMIN=config/minimums.config
+RUN=config/run.conf
+CANCEL=config/cancels.conf
+FSEC=config/seconds.conf
+FMIN=config/minimums.conf
 SEC=20
 
 
@@ -341,6 +307,7 @@ min_check () {
 check_link () {
 
 	SPECIAL=0
+	BADGE='EUR'
 	SEC=20
 	MIN=0
 	LOG=files/${1}_${ID}.log
@@ -377,23 +344,28 @@ Write: /cancel$1"
 	
 		if [ "$COUNTRY" = "ES" ]; then
 			LOCALE=es
+			BADGE='EUR'
 		fi
 	
 		if [ "$COUNTRY" = "IT" ]; then
 			LOCALE=it
+			BADGE='EUR'
 		fi	
 		
 		if [ "$COUNTRY" = "DE" ]; then
 			LOCALE=de
+			BADGE='EUR'
 		fi	
 		
 		if [ "$COUNTRY" = "UK" ]; then
 			LOCALE=co.uk
 			SPECIAL=1
+			BADGE='GBP'
 		fi	
 		
 		if [ "$COUNTRY" = "FR" ]; then
 			LOCALE=fr
+			BADGE='EUR'
 		fi
 		
 	else 
@@ -444,7 +416,13 @@ Write: /cancel$1"
 			MIN=0
 		fi
 	
-		date=`date`
+		grep -e $ID_$1 $CANCEL
+		if [ $? == 0 ]; then
+			break
+			exit
+		fi	
+	
+		date=$(date)
 					
 		if [ "$SPECIAL" == "1" ]; then
 			REL=`curl -s $LINK | grep '<span class="a-size-large a-color-price olpOfferPrice a-text-bold">' | head -1 | cut -d ">" -f 2 | cut -d "<" -f1 | sed 's/^[[:space:]]*//' | cut -c3- | cut -f 1 -d" "`
@@ -459,15 +437,10 @@ Write: /cancel$1"
 			continue
 		fi
 		
-		grep -e $ID_$1 $CANCEL
-		if [ $? == 0 ]; then
-			grep -v $ID_$1 $CANCEL > $CANCEL.bak
-			mv $CANCEL.bak $CANCEL
-			break
-		fi		
+	
 		if [ "$REL" != "$RELX" ]; then
 			if [ "$RELX" == "0" ]; then
-				send_markdown_message "$ID" "*Current price:* $REL EUR/GBP"
+				send_markdown_message "$ID" "*Current price:* $REL $BADGE"
 				send_markdown_message "$ID" "*Checking time:* $SEC seconds"
 				send_markdown_message "$ID" "*Running!*"
 				echo "$REL ------- $date" >> ${LOG}
@@ -478,17 +451,21 @@ Write: /cancel$1"
 
 			if [ "$MIN" == "0" ]; then
 			send_markdown_message "$ID" "*Price for Track $1 has changed!*
-_Old price:_ $RELX EUR/GBP
-_New price:_ $REL EUR/GBP
+_Old price:_ $RELX $BADGE
+_New price:_ $REL $BADGE
 $LINK"
 			else
 			    MATCH=$( echo "$MIN>$REL" | bc )
    				 if [ $MATCH -eq 1 ]; then
-       					send_markdown_message "$ID" "*Price alert.
-Product under the specified limit: $MIN *
+
+send_markdown_message "$ID" "*Price for Track $1 has changed!*
+_Alert price:_ $MIN $BADGE
+_New price:_ $REL $BADGE
 $LINK"
    				 fi
 			fi
+
+		
 
 			echo "$REL ------- $date" >> ${LOG}
 
@@ -668,3 +645,4 @@ When a change of price is detected, it will notify you and it will write it to a
 		esac
 
 	fi
+
