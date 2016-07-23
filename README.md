@@ -12,7 +12,7 @@
 ============
 
 ### __Information:__
-
+(A little bit outdated, it has more functions now.)               
 This bot tracks Amazon prices of your products all the time, this is intended to do with products that have very hight drops of price in short moments of time. Thing that usually occurs in Amazon.
 
 When a change of price is detected, it will notify you and it will write it to a prices logfile which you can access everytime you want.
@@ -20,6 +20,7 @@ When a change of price is detected, it will notify you and it will write it to a
 ============
 ### __How to use the bot:__
 
+(A little bit outdated, it has more functions now.)               
 This bot can track up to six amazon products at the same time. Each product will be checked separately, has a different logfile and other configurations.
 
 To use the bot, you need to provide the Amazon link of the product, but the link of the offer-listing of it. For example:
@@ -40,6 +41,7 @@ As product checking runs separately, commands are separated for the different tr
 ============
 #### __Example:__
 
+(A little bit outdated, it has more functions now.)              
 `/check1 https://www.amazon.es/gp/offer-listing/B00P738MUU/ref=dp_olp_new?ie=UTF8&condition=new`
 This will asign that tracking to the _check1_
 
@@ -68,9 +70,9 @@ To use the bot by yourself, follow this instructions:
 
 *Clone the repo:* `git clone https://github.com/iicc1/Check4ChangeAmazonBot`       
 
-*Start the bot:* `tmux new-session -d -s check "bash bashbot.sh`              
+*Start the bot:* `bash bashbot.sh start`              
 
-*Stop the bot:* `tmux kill-session -t check`             
+*Stop the bot:* `bash bashbot.sh stop`             
  
 ============
 
