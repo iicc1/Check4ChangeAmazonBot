@@ -161,7 +161,7 @@ fi
 
 PRICE5=$(grep ${ID}_5 $FMIN | cut -d '_' -f3 )
 if [ -z "${PRICE5}" ]; then
-	PRICE15=$(echo "When price changes" )
+	PRICE5=$(echo "When price changes" )
 else
 	PRICE5=$(echo "If drops under ${PRICE5}EUR/GBP" )
 fi
